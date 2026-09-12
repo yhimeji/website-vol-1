@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>次の一歩 | スキル診断で見つける資格</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#f7f7fa;
+    --surface:#ffffff;
+    --ink:#16151d;
+    --muted:#6e6c7a;
+    --line:#e7e6ee;
+    --g1:#4f46e5;
+    --g2:#8b5cf6;
+    --g3:#06b6d4;
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk','Inter',sans-serif;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+
+  /* background texture */
+  .bg-field{
+    position:fixed; inset:0; z-index:-1; overflow:hidden;
+  }
+  .bg-field::before, .bg-field::after{
+    content:"";
+    position:absolute;
+    width:60vw; height:60vw;
+    border-radius:50%;
+    filter:blur(90px);
+    opacity:0.16;
+  }
+  .bg-field::before{
+    background:radial-gradient(circle at 30% 30%, var(--g1), transparent 60%);
+    top:-20vw; right:-15vw;
+  }
+  .bg-field::after{
+    background:radial-gradient(circle at 60% 60%, var(--g3), transparent 60%);
+    bottom:-25vw; left:-20vw;
+  }
+
+  .wrap{
+    max-width:880px;
+    margin:0 auto;
+    padding:64px 24px 120px;
+  }
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+    margin-bottom:56px;
+  }
+  .mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .mark .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:linear-gradient(135deg, var(--g1), var(--g3));
+  }
+  .top nav{font-size:14px; color:var(--muted);}
+
+  /* ---------- screens ---------- */
+  .screen{ display:none; }
+  .screen.active{ display:block; animation:screenIn .5s ease both; }
+  @keyframes screenIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+  /* --- select screen --- */
+  .hero h1{
+    font-size:clamp(26px, 7vw, 46px);
+    font-weight:600;
+  }
+  .hero p.lede{
+    margin-top:18px;
+    max-width:640px;
+    font-size:17px;
+    color:var(--muted);
+  }
+
+  /* --- select panel (interactive area) --- */
+  .select-panel{
+    margin-top:44px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:36px 36px 32px;
+    box-shadow:0 20px 45px -30px rgba(22,21,29,0.35);
+  }
+  .panel-label{
+    display:flex; align-items:center; gap:9px;
+    font-size:13px; font-weight:600; color:var(--g1);
+    text-transform:uppercase; letter-spacing:.04em;
+    margin-bottom:28px;
+  }
+  .panel-label-dot{
+    width:8px; height:8px; border-radius:50%; flex:none;
+    background:linear-gradient(135deg, var(--g1), var(--g3));
+    box-shadow:0 0 0 4px rgba(79,70,229,0.12);
+  }
+  .select-panel .group:first-of-type{ margin-top:0; }
+
+  .group{ margin-top:44px; }
+  .group-title{
+    font-size:14px;
+    font-weight:600;
+    color:var(--ink);
+    margin-bottom:4px;
+  }
+  .group-sub{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:16px;
+  }
+  .chips{
+    display:flex; flex-wrap:wrap; gap:10px;
+  }
+  .chip{
+    appearance:none;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+    padding:10px 18px;
+    border-radius:100px;
+    font-size:14px;
+    font-family:inherit;
+    cursor:pointer;
+    transition:border-color .18s ease, transform .18s ease, background .18s ease;
+  }
+  .chip:hover{ border-color:#c9c6da; }
+  .chip:focus-visible{ outline:2px solid var(--g2); outline-offset:2px; }
+  .chip.selected{
+    color:#fff;
+    border-color:transparent;
+    background:linear-gradient(135deg, var(--g1), var(--g2));
+  }
+  .chip.selected:hover{ transform:translateY(-1px); }
+
+  .diagnose-row{
+    margin-top:48px;
+    display:flex; align-items:center; gap:18px;
+    flex-wrap:wrap;
+  }
+  .btn-primary{
+    appearance:none; border:none; cursor:pointer;
+    font-family:inherit; font-weight:600; font-size:15px;
+    color:#fff;
+    padding:15px 30px;
+    border-radius:100px;
+    background:linear-gradient(135deg, var(--g1), var(--g2) 55%, var(--g3));
+    background-size:160% 160%;
+    background-position:0% 50%;
+    transition:background-position .5s ease, opacity .2s ease, transform .15s ease;
+  }
+  .btn-primary:not(:disabled):hover{ background-position:100% 50%; transform:translateY(-1px); }
+  .btn-primary:disabled{ opacity:.35; cursor:not-allowed; }
+  .count-hint{ font-size:13px; color:var(--muted); }
+
+  .btn-ghost{
+    appearance:none; border:1px solid var(--line); background:transparent;
+    color:var(--ink); font-family:inherit; font-weight:600; font-size:14px;
+    padding:11px 22px; border-radius:100px; cursor:pointer;
+    transition:border-color .18s ease;
+  }
+  .btn-ghost:hover{ border-color:#c9c6da; }
+
+  /* --- loading screen --- */
+  .loading-screen{
+    min-height:60vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    gap:26px;
+  }
+  .ring{
+    width:84px; height:84px; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--g1), var(--g2), var(--g3), var(--g1));
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 9px));
+            mask:radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 9px));
+    animation:spin 1.1s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .loading-text{ font-size:15px; color:var(--muted); min-height:1.6em; }
+
+  /* --- results screen --- */
+  .results-head{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:8px;}
+  .results-head h2{ font-size:26px; font-weight:600; }
+  .results-sub{ color:var(--muted); font-size:14px; margin-top:6px; }
+
+  .selected-tags{
+    display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 40px;
+  }
+  .tag-pill{
+    font-size:12.5px; padding:5px 12px; border-radius:100px;
+    background:var(--surface); border:1px solid var(--line); color:var(--muted);
+  }
+
+  .cards{ display:flex; flex-direction:column; gap:16px; }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px 26px;
+    position:relative;
+    overflow:hidden;
+    opacity:0; transform:translateY(10px);
+    animation:cardIn .5s ease forwards;
+  }
+  .card::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--accent, linear-gradient(180deg, var(--g1), var(--g3)));
+  }
+  @keyframes cardIn{ to{ opacity:1; transform:none; } }
+
+  .card-top{ display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+  .card-name{ font-size:18px; font-weight:600; font-family:'Space Grotesk',sans-serif; }
+  .card-match{ font-size:12.5px; color:var(--muted); margin-top:4px; }
+  .card-cat{
+    font-size:12px; padding:4px 10px; border-radius:100px;
+    background:var(--bg); color:var(--muted); white-space:nowrap;
+  }
+
+  .card-grid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:14px 22px;
+  }
+  .field-label{ font-size:12px; color:var(--muted); margin-bottom:3px; }
+  .field-value{ font-size:14px; }
+
+  .meter{ display:flex; gap:3px; margin-top:4px; }
+  .meter span{
+    width:16px; height:6px; border-radius:3px; background:var(--line);
+  }
+  .meter span.on{ background:linear-gradient(135deg, var(--g1), var(--g3)); }
+
+  .empty{
+    padding:48px 0; text-align:center; color:var(--muted);
+  }
+
+  footer{
+    margin-top:56px; padding-top:24px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted);
+  }
+
+  @media (max-width:560px){
+    .card-grid{ grid-template-columns:1fr; }
+    .wrap{ padding:44px 18px 90px; }
+    .select-panel{ padding:26px 20px 24px; border-radius:16px; }
+    .hero p.lede{ font-size:14px; }
+    .top nav{ font-size:12.5px; }
+    .diagnose-row{ gap:14px; }
+    .btn-primary, .btn-ghost{ width:100%; text-align:center; }
+    .diagnose-row .count-hint{ width:100%; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *, *::before, *::after{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-field"></div>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="mark"><span class="dot"></span>次の一歩</div>
+    <nav>スキル診断 &nbsp;/&nbsp; 資格レコメンド</nav>
+  </header>
+
+  <!-- 画面1: スキル選択 -->
+  <section class="screen active" id="screen-select">
+    <div class="hero">
+      <h1>次に学ぶべきことを、<br>今の仕事から見つける。</h1>
+      <p class="lede">
+        いま扱っている技術や業務を選ぶだけで、キャリアに直結する資格を診断します。<br>
+        技術スキルと業務知識、両方の観点から次の一歩を提案します。
+      </p>
+    </div>
+
+    <div class="select-panel">
+      <div class="panel-label"><span class="panel-label-dot"></span>あなたのスキルを選択してください</div>
+
+      <div class="group">
+        <div class="group-title">技術スキル</div>
+        <div class="group-sub">開発プロジェクトで使っているものを選んでください</div>
+        <div class="chips" id="chips-tech"></div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">業務スキル</div>
+        <div class="group-sub">担当している業務領域があれば選んでください</div>
+        <div class="chips" id="chips-business"></div>
+      </div>
+
+      <div class="diagnose-row">
+        <button class="btn-primary" id="btn-diagnose" disabled>診断する</button>
+        <span class="count-hint" id="count-hint">まずはスキルを1つ以上選んでください</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 画面2: 診断中 -->
+  <section class="screen" id="screen-loading">
+    <div class="loading-screen">
+      <div class="ring"></div>
+      <div class="loading-text" id="loading-text">選んだスキルを照合しています…</div>
+    </div>
+  </section>
+
+  <!-- 画面3: 結果 -->
+  <section class="screen" id="screen-results">
+    <div class="results-head">
+      <h2>あなたへのおすすめ資格</h2>
+    </div>
+    <div class="results-sub" id="results-sub"></div>
+    <div class="selected-tags" id="selected-tags"></div>
+    <div class="cards" id="cards"></div>
+
+    <div class="diagnose-row" style="margin-top:40px;">
+      <button class="btn-ghost" id="btn-reset">スキルを選び直す</button>
+    </div>
+  </section>
+
+  <footer>
+    受験料・学習時間・難易度は目安です。最新情報は各認定団体の公式サイトでご確認ください。
+  </footer>
+
+</div>
+
+<script>
+/* ---------------- データ定義 ---------------- */
+const SKILLS = {
+  tech: [
+    {id:'oracle', label:'Oracle'},
+    {id:'sqlserver', label:'SQL Server'},
+    {id:'github', label:'GitHub / Copilot'},
+    {id:'java', label:'JAVA'},
+    {id:'csharp', label:'C#'},
+    {id:'react', label:'React'},
+    {id:'javascript', label:'JavaScript'},
+    {id:'nodejs', label:'Node.js'},
+  ],
+  business: [
+    {id:'securities', label:'証券'},
+    {id:'aml', label:'AML(マネロン対策)'},
+  ]
+};
+
+const CATEGORY_LABEL = { tech:'技術', securities:'証券', aml:'AML' };
+
+const CERTS = [
+  {name:'ORACLE MASTER Bronze DBA', skills:['oracle'], category:'tech',
+   fee:'3万円台前半(目安・要確認)', method:'CBT方式(テストセンター/オンライン監督なし可)',
+   difficulty:2, studyHours:'30〜50時間', marketValue:'DB未経験者の基礎証明として評価', valueScore:2},
+
+  {name:'ORACLE MASTER Silver DBA', skills:['oracle'], category:'tech',
+   fee:'約41,773円(税込・変動あり)', method:'CBT方式',
+   difficulty:3, studyHours:'50〜80時間', marketValue:'DB運用担当者として評価されやすい', valueScore:3},
+
+  {name:'ORACLE MASTER Gold DBA', skills:['oracle'], category:'tech',
+   fee:'Silverと同程度(要Silver DBA合格)', method:'CBT方式',
+   difficulty:4, studyHours:'100時間〜', marketValue:'DB管理者として高い専門性を証明', valueScore:4},
+
+  {name:'ORACLE MASTER Silver SQL', skills:['oracle'], category:'tech',
+   fee:'Silver DBAと同程度(目安)', method:'CBT方式',
+   difficulty:2, studyHours:'40〜60時間', marketValue:'SQL力の客観的な証明になる', valueScore:2},
+
+  {name:'DP-900(Azure Data Fundamentals)', skills:['sqlserver'], category:'tech',
+   fee:'1万円未満(目安・要確認)', method:'オンライン監督試験 / テストセンター',
+   difficulty:1, studyHours:'20〜30時間', marketValue:'データ分野の入口として評価', valueScore:1},
+
+  {name:'DP-300(Azure Database Administrator Associate)', skills:['sqlserver'], category:'tech',
+   fee:'数万円台(目安・要確認)', method:'Pearson VUE、12ヶ月ごとに更新',
+   difficulty:3, studyHours:'60〜100時間', marketValue:'クラウドDB運用スキルとして評価が高い', valueScore:4},
+
+  {name:'GH-900(GitHub Foundations)', skills:['github'], category:'tech',
+   fee:'約99USD', method:'オンライン受験(日本語対応)',
+   difficulty:1, studyHours:'20〜30時間', marketValue:'GitHub活用の基礎証明', valueScore:2},
+
+  {name:'GH-300(GitHub Copilot Certification)', skills:['github'], category:'tech',
+   fee:'約99USD(目安)', method:'オンライン受験',
+   difficulty:3, studyHours:'30〜50時間', marketValue:'AI駆動開発を推進できる証明として需要が増加中', valueScore:4},
+
+  {name:'Oracle Certified Java Programmer, Silver SE', skills:['java'], category:'tech',
+   fee:'要確認', method:'CBT方式',
+   difficulty:2, studyHours:'40〜60時間', marketValue:'Java基礎力の証明', valueScore:2},
+
+  {name:'Oracle Certified Java Programmer, Gold SE', skills:['java'], category:'tech',
+   fee:'要確認', method:'CBT方式',
+   difficulty:4, studyHours:'80時間〜', marketValue:'Java開発者として高い専門性を証明', valueScore:4},
+
+  {name:'AZ-204(Azure Developer Associate)', skills:['csharp'], category:'tech',
+   fee:'要確認', method:'Pearson VUE',
+   difficulty:3, studyHours:'60〜90時間', marketValue:'.NET/C#開発者としてクラウド案件で評価', valueScore:3},
+
+  {name:'JSNAD(OpenJS Node.js Application Developer)', skills:['nodejs','javascript'], category:'tech',
+   fee:'要確認(USD建て)', method:'オンライン監督試験',
+   difficulty:3, studyHours:'50〜80時間', marketValue:'Node.jsバックエンド力の客観的な証明', valueScore:3},
+
+  {name:'Meta Front-End Developer Professional Certificate', skills:['react','javascript'], category:'tech',
+   fee:'月額課金制(Coursera)', method:'オンライン講座+課題提出',
+   difficulty:2, studyHours:'総学習100時間程度', marketValue:'React/フロントエンド基礎の証明', valueScore:2},
+
+  {name:'証券外務員二種', skills:['securities'], category:'securities',
+   fee:'一種よりやや安価(目安)', method:'プロメトリック(常時受験可)',
+   difficulty:2, studyHours:'40〜60時間', marketValue:'金融業界エントリーの必須資格', valueScore:2},
+
+  {name:'証券外務員一種', skills:['securities'], category:'securities',
+   fee:'12,169円', method:'プロメトリック(常時受験可)',
+   difficulty:3, studyHours:'80〜150時間', marketValue:'金融営業職でほぼ必須、平均年収帯400〜800万円', valueScore:3},
+
+  {name:'フィナンシャル・プランナー(FP)', skills:['securities'], category:'securities',
+   fee:'級により変動', method:'学科試験+実技試験',
+   difficulty:2, studyHours:'80〜150時間(2級目安)', marketValue:'個人向け資産相談で評価される', valueScore:2},
+
+  {name:'証券アナリスト(CMA)', skills:['securities'], category:'securities',
+   fee:'通信講座+試験費用(協会指定)', method:'日本証券アナリスト協会指定の通信・試験',
+   difficulty:4, studyHours:'200時間〜', marketValue:'企業分析・運用職で高評価', valueScore:4},
+
+  {name:'AML/CFTスタンダードコース', skills:['aml'], category:'aml',
+   fee:'要確認(検定料)', method:'CBT方式・四答択一50問',
+   difficulty:1, studyHours:'20〜30時間', marketValue:'金融機関の営業店担当者として基礎級の資格', valueScore:2},
+
+  {name:'AML/CFTオフィサー', skills:['aml'], category:'aml',
+   fee:'要確認', method:'CBT方式',
+   difficulty:3, studyHours:'50〜80時間', marketValue:'本部管理部門としての専門性を証明', valueScore:3},
+
+  {name:'AML/CFTオーディター', skills:['aml'], category:'aml',
+   fee:'要確認', method:'CBT方式',
+   difficulty:4, studyHours:'80時間〜', marketValue:'内部監査部門としての高い専門性を証明', valueScore:4},
+
+  {name:'CAMS(公認AMLスペシャリスト)', skills:['aml'], category:'aml',
+   fee:'海外価格(USD建て・要確認)', method:'テストセンター、120問中75問正解で合格',
+   difficulty:4, studyHours:'3ヶ月程度(集中学習の場合)', marketValue:'世界共通のAML専門資格、国際的なキャリアで高評価', valueScore:5},
+];
+
+const CATEGORY_GRADIENT = {
+  tech: 'linear-gradient(180deg, var(--g1), var(--g3))',
+  securities: 'linear-gradient(180deg, var(--g2), var(--g1))',
+  aml: 'linear-gradient(180deg, var(--g3), var(--g2))',
+};
+
+/* ---------------- 状態 ---------------- */
+const state = { selected: new Set() };
+
+/* ---------------- 画面1: チップ生成 ---------------- */
+function renderChips(){
+  const techWrap = document.getElementById('chips-tech');
+  const bizWrap = document.getElementById('chips-business');
+  SKILLS.tech.forEach(s => techWrap.appendChild(makeChip(s)));
+  SKILLS.business.forEach(s => bizWrap.appendChild(makeChip(s)));
+}
+
+function makeChip(skill){
+  const btn = document.createElement('button');
+  btn.className = 'chip';
+  btn.type = 'button';
+  btn.textContent = skill.label;
+  btn.setAttribute('aria-pressed', 'false');
+  btn.addEventListener('click', () => {
+    if(state.selected.has(skill.id)){
+      state.selected.delete(skill.id);
+      btn.classList.remove('selected');
+      btn.setAttribute('aria-pressed','false');
+    }else{
+      state.selected.add(skill.id);
+      btn.classList.add('selected');
+      btn.setAttribute('aria-pressed','true');
+    }
+    updateDiagnoseButton();
+  });
+  return btn;
+}
+
+function updateDiagnoseButton(){
+  const btn = document.getElementById('btn-diagnose');
+  const hint = document.getElementById('count-hint');
+  const n = state.selected.size;
+  btn.disabled = n === 0;
+  hint.textContent = n === 0
+    ? 'まずはスキルを1つ以上選んでください'
+    : `${n}件のスキルを選択中`;
+}
+
+/* ---------------- 画面遷移 ---------------- */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+const LOADING_MESSAGES = [
+  '選んだスキルを照合しています…',
+  '関連する資格を絞り込んでいます…',
+  '受験料・難易度データを準備しています…',
+];
+
+document.getElementById('btn-diagnose').addEventListener('click', () => {
+  if(state.selected.size === 0) return;
+  showScreen('screen-loading');
+
+  const textEl = document.getElementById('loading-text');
+  let i = 0;
+  textEl.textContent = LOADING_MESSAGES[0];
+  const interval = setInterval(() => {
+    i++;
+    if(i < LOADING_MESSAGES.length){ textEl.textContent = LOADING_MESSAGES[i]; }
+  }, 480);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    renderResults();
+    showScreen('screen-results');
+  }, 1500);
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  showScreen('screen-select');
+});
+
+/* ---------------- 結果生成 ---------------- */
+function renderResults(){
+  const selectedIds = Array.from(state.selected);
+
+  const matched = CERTS
+    .map(cert => {
+      const overlap = cert.skills.filter(s => selectedIds.includes(s));
+      return { cert, score: overlap.length, matchedSkills: overlap };
+    })
+    .filter(m => m.score > 0)
+    .sort((a,b) => b.score - a.score || b.cert.valueScore - a.cert.valueScore);
+
+  const sub = document.getElementById('results-sub');
+  const tagsWrap = document.getElementById('selected-tags');
+  const cardsWrap = document.getElementById('cards');
+
+  sub.textContent = matched.length
+    ? `選択したスキルに基づき、${matched.length}件の資格が見つかりました。`
+    : '一致する資格が見つかりませんでした。別のスキルを選び直してください。';
+
+  tagsWrap.innerHTML = '';
+  selectedIds.forEach(id => {
+    const label = [...SKILLS.tech, ...SKILLS.business].find(s => s.id === id)?.label || id;
+    const pill = document.createElement('span');
+    pill.className = 'tag-pill';
+    pill.textContent = label;
+    tagsWrap.appendChild(pill);
+  });
+
+  cardsWrap.innerHTML = '';
+
+  if(matched.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = '該当する資格がありません。';
+    cardsWrap.appendChild(empty);
+    return;
+  }
+
+  matched.forEach((m, idx) => {
+    cardsWrap.appendChild(buildCard(m.cert, idx));
+  });
+}
+
+function buildCard(cert, idx){
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.setProperty('--accent', CATEGORY_GRADIENT[cert.category] || CATEGORY_GRADIENT.tech);
+  card.style.animationDelay = `${idx * 90}ms`;
+
+  const matchedLabels = cert.skills
+    .map(id => [...SKILLS.tech, ...SKILLS.business].find(s => s.id === id)?.label)
+    .filter(Boolean)
+    .join(' / ');
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div>
+        <div class="card-name">${cert.name}</div>
+        <div class="card-match">関連スキル: ${matchedLabels}</div>
+      </div>
+      <div class="card-cat">${CATEGORY_LABEL[cert.category]}</div>
+    </div>
+    <div class="card-grid">
+      <div>
+        <div class="field-label">受験料</div>
+        <div class="field-value">${cert.fee}</div>
+      </div>
+      <div>
+        <div class="field-label">受験方法</div>
+        <div class="field-value">${cert.method}</div>
+      </div>
+      <div>
+        <div class="field-label">難易度</div>
+        <div class="meter">${buildMeter(cert.difficulty)}</div>
+      </div>
+      <div>
+        <div class="field-label">学習時間の目安</div>
+        <div class="field-value">${cert.studyHours}</div>
+      </div>
+      <div style="grid-column:1 / -1;">
+        <div class="field-label">市場価値</div>
+        <div class="field-value">${cert.marketValue}</div>
+        <div class="meter">${buildMeter(cert.valueScore)}</div>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function buildMeter(score){
+  let html = '';
+  for(let i = 1; i <= 5; i++){
+    html += `<span class="${i <= score ? 'on' : ''}"></span>`;
+  }
+  return html;
+}
+
+/* ---------------- 初期化 ---------------- */
+renderChips();
+</script>
+</body>
+</html>
